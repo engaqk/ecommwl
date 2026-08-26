@@ -1,0 +1,48 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #B76E79; /* Rose Gold */
+  --color-primary-dark: #9A5B64;
+  --color-navy: #4A2533; /* Deep Burgundy / Plum */
+  --color-background: #FFF8F7; /* Soft blush cream */
+  --color-success: #2b704c;
+  --color-success-dark: #1f5036;
+}
+
+@layer base {
+  body {
+    background-color: #F4EAEB; /* Soft dusty rose backdrop */
+    color: var(--color-navy);
+    font-family: var(--font-inter), system-ui, sans-serif;
+  }
+}
+
+.font-serif {
+  font-family: var(--font-playfair), serif;
+}
+
+@keyframes text-sparkle {
+  0%, 100% {
+    text-shadow: 0 0 4px rgba(183,110,121,0.2);
+    color: var(--color-primary);
+  }
+  50% {
+    text-shadow: 0 0 12px rgba(251,191,36,0.8), 0 0 20px rgba(251,191,36,0.6);
+    color: #fbbf24; /* amber-400 */
+  }
+}
+
+.animate-text-sparkle {
+  animation: text-sparkle 2s ease-in-out infinite;
+}
+
+/* Hide Google Translate Toolbar */
+body { top: 0 !important; }
+.skiptranslate { display: none !important; }
+#goog-gt-tt { display: none !important; }
+.goog-te-banner-frame { display: none !important; }
+.goog-te-menu-value { display: none !important; }
+.goog-tooltip { display: none !important; }
+.goog-tooltip:hover { display: none !important; }
+.goog-text-highlight { background-color: transparent !important; box-shadow: none !important; }
+

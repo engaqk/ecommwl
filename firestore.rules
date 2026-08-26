@@ -1,0 +1,56 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Check if the logged-in user is the Super Admin
+    function isSuperAdmin() {
+      return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SUPER_ADMIN';
+    }
+    
+    // Check if the logged-in user is a Tenant Admin for a specific store
+    function isTenantAdmin(storeId) {
+      return request.auth != null && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'TENANT_ADMIN' &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.storeId == storeId;
+    }
+
+    // MULTI-TENANT CONFIGURATION
+    match /stores/{document=**} {
+      allow read: if true;
+      allow write: if isSuperAdmin(); // Only super admin can create/delete stores
+    }
+
+    // MULTI-TENANT PRODUCTS
+    match /products/{productId} {
+      allow read: if true;
+      // Allow write if Super Admin, OR if Tenant Admin managing their own store's product
+      allow create: if isSuperAdmin() || isTenantAdmin(request.resource.data.storeId);
+      allow update, delete: if isSuperAdmin() || isTenantAdmin(resource.data.storeId);
+    }
+    
+    // ORDERS & CUSTOMERS
+    match /orders/{document=**} {
+      allow create, read, update: if true; // Customers need to place orders
+      allow delete: if isSuperAdmin();
+    }
+    
+    match /reviews/{document=**} {
+      allow read, create: if true;
+      allow update, delete: if isSuperAdmin();
+    }
+
+    // USERS
+    match /users/{userId} {
+      allow read, write: if true; // Allows customers and admins to register
+    }
+
+    // OTHER COLLECTIONS
+    match /customOrders/{document=**} {
+      allow create, read: if true; 
+      allow update, delete: if isSuperAdmin();
+    }
+    match /wishlist/{document=**} {
+      allow read, write: if true;
+    }
+  }
+}
