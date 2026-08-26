@@ -24,7 +24,7 @@ interface TenantStore {
   clearStore: () => void;
 }
 
-// Default theme (fallback to Shaza53 colors if not found)
+// Default theme (fallback to my-store colors if not found)
 const defaultTheme: ThemeConfig = {
   primary: "#4A2533",
   secondary: "#B76E79",

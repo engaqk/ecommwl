@@ -174,9 +174,9 @@ export default function Navbar() {
 
               <div className="flex flex-col items-start">
                 <span className="text-xl sm:text-2xl md:text-3xl font-serif text-[var(--color-navy)] font-bold tracking-tight leading-none transition-colors duration-500 flex items-baseline relative">
-                  {store?.name ? store.name.split(' ')[0] : 'SHAZA'}
+                  {store?.name ? store.name.split(' ')[0] : 'MY'}
                   <span className="ml-1 animate-text-sparkle text-[var(--color-primary)]">
-                    {store?.name ? store.name.split(' ').slice(1).join(' ') : '53'}
+                    {store?.name ? store.name.split(' ').slice(1).join(' ') : 'STORE'}
                   </span>
                 </span>
                 <span className="text-[7px] md:text-[9px] uppercase tracking-[6px] md:tracking-[8px] font-semibold text-gray-500 mt-1 pl-1">
