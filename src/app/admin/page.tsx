@@ -46,14 +46,20 @@ export default function AdminLogin() {
           const { doc, setDoc } = await import("firebase/firestore");
           const { db } = await import("@/lib/firebase");
           
-          await setDoc(doc(db, "users", userCredential.user.uid), {
+          const userDataObj = {
             uid: userCredential.user.uid,
             email: loginEmail,
             displayName: "Tenant Admin",
-            role: "TENANT_ADMIN",
+            role: "TENANT_ADMIN" as const,
             storeId: email.split("_admin")[0] || "my-store",
             createdAt: new Date().toISOString()
-          }, { merge: true });
+          };
+
+          await setDoc(doc(db, "users", userCredential.user.uid), userDataObj, { merge: true });
+
+          // Fix Race Condition
+          const { useAuthStore } = await import("@/store/useAuthStore");
+          useAuthStore.setState({ userData: userDataObj });
 
           router.push("/admin/dashboard");
         } catch (createErr) {

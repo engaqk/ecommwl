@@ -47,15 +47,19 @@ export default function SuperAdminLoginPage() {
         try {
           const userCredential = await createUserWithEmailAndPassword(auth, superEmail, password);
           
-          // Step 3: Automatically assign the SUPER_ADMIN role in Firestore
-          await setDoc(doc(db, "users", userCredential.user.uid), {
+          const userDataObj = {
             uid: userCredential.user.uid,
             email: superEmail,
             displayName: "Super Admin",
-            role: "SUPER_ADMIN",
+            role: "SUPER_ADMIN" as const,
             storeId: "my-store",
             createdAt: new Date().toISOString()
-          }, { merge: true });
+          };
+          
+          await setDoc(doc(db, "users", userCredential.user.uid), userDataObj, { merge: true });
+          
+          // Fix Race Condition: Force update the store so the redirect happens immediately
+          useAuthStore.setState({ userData: userDataObj });
 
           // Login will now proceed to redirect via the useEffect
         } catch (createErr: any) {
@@ -63,7 +67,7 @@ export default function SuperAdminLoginPage() {
           setAuthLoading(false);
         }
       } else {
-        setError("Invalid password.");
+        setError("Invalid password. Please ensure it is at least 6 characters.");
         setAuthLoading(false);
       }
     }
