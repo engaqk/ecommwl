@@ -50,6 +50,7 @@ export default function AdminLogin() {
             uid: userCredential.user.uid,
             email: loginEmail,
             displayName: "Tenant Admin",
+            photoURL: null,
             role: "TENANT_ADMIN" as const,
             storeId: email.split("_admin")[0] || "my-store",
             createdAt: new Date().toISOString()

@@ -51,6 +51,7 @@ export default function SuperAdminLoginPage() {
             uid: userCredential.user.uid,
             email: superEmail,
             displayName: "Super Admin",
+            photoURL: null,
             role: "SUPER_ADMIN" as const,
             storeId: "my-store",
             createdAt: new Date().toISOString()
