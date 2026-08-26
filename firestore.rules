@@ -52,5 +52,10 @@ service cloud.firestore {
     match /wishlist/{document=**} {
       allow read, write: if true;
     }
+    // GLOBAL SETTINGS
+    match /settings/{document=**} {
+      allow read: if true;
+      allow write: if isSuperAdmin();
+    }
   }
 }

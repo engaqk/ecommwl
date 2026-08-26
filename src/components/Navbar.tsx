@@ -8,6 +8,7 @@ import { useCartStore } from "@/store/useCartStore";
 import { useWishlistStore } from "@/store/useWishlistStore";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useCurrencyStore } from "@/store/useCurrencyStore";
+import { useTenantStore } from "@/store/useTenantStore";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function Navbar() {
@@ -16,6 +17,7 @@ export default function Navbar() {
   const { items, toggleDrawer } = useCartStore();
   const { items: wishlistItems } = useWishlistStore();
   const { user, logout, initializeAuthListener } = useAuthStore();
+  const { store } = useTenantStore();
   const [mounted, setMounted] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [langMenuOpen, setLangMenuOpen] = useState(false);
@@ -172,13 +174,13 @@ export default function Navbar() {
 
               <div className="flex flex-col items-start">
                 <span className="text-xl sm:text-2xl md:text-3xl font-serif text-[var(--color-navy)] font-bold tracking-tight leading-none transition-colors duration-500 flex items-baseline relative">
-                  SHAZA
+                  {store?.name ? store.name.split(' ')[0] : 'SHAZA'}
                   <span className="ml-1 animate-text-sparkle text-[var(--color-primary)]">
-                    53
+                    {store?.name ? store.name.split(' ').slice(1).join(' ') : '53'}
                   </span>
                 </span>
                 <span className="text-[7px] md:text-[9px] uppercase tracking-[6px] md:tracking-[8px] font-semibold text-gray-500 mt-1 pl-1">
-                  Creation
+                  Store
                 </span>
               </div>
             </div>
