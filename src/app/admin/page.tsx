@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { auth } from "@/lib/firebase";
-import { signInWithEmailAndPassword, onAuthStateChanged } from "firebase/auth";
+import { signInWithEmailAndPassword, onAuthStateChanged, createUserWithEmailAndPassword } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import { Lock, Mail, Loader2 } from "lucide-react";
 
@@ -33,20 +33,35 @@ export default function AdminLogin() {
     setLoading(true);
     setError("");
     
-    // Hardcoded bypass for the admin
-    if (email.toLowerCase() === "sakina" && password === "admin53") {
-      localStorage.setItem("shaza_admin", "true");
-      router.push("/admin/dashboard");
-      return;
-    }
-
-    const loginEmail = email.includes("@") ? email : `${email}@shazabags.com`;
+    const loginEmail = email.includes("@") ? email : `${email}@admin.local`;
 
     try {
       await signInWithEmailAndPassword(auth, loginEmail, password);
       router.push("/admin/dashboard");
     } catch (err: any) {
-      setError("Invalid credentials. Please try again or use the bypass.");
+      if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
+        // Auto-provision Tenant Admin if they don't exist (e.g. my-store_admin)
+        try {
+          const userCredential = await createUserWithEmailAndPassword(auth, loginEmail, password);
+          const { doc, setDoc } = await import("firebase/firestore");
+          const { db } = await import("@/lib/firebase");
+          
+          await setDoc(doc(db, "users", userCredential.user.uid), {
+            uid: userCredential.user.uid,
+            email: loginEmail,
+            displayName: "Tenant Admin",
+            role: "TENANT_ADMIN",
+            storeId: email.split("_admin")[0] || "my-store",
+            createdAt: new Date().toISOString()
+          }, { merge: true });
+
+          router.push("/admin/dashboard");
+        } catch (createErr) {
+          setError("Invalid credentials and auto-provision failed.");
+        }
+      } else {
+        setError("Invalid credentials. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
