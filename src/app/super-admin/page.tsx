@@ -9,7 +9,7 @@ import { Loader2, Plus, LayoutDashboard, Globe, LogOut, Copy, Check, Settings2, 
 import Link from "next/link";
 
 export default function SuperAdminPage() {
-  const { user, userData, loading, logout } = useAuthStore();
+  const { user, userData, loading, logout, initializeAuthListener } = useAuthStore();
   const router = useRouter();
   
   const [stores, setStores] = useState<any[]>([]);
@@ -29,6 +29,10 @@ export default function SuperAdminPage() {
   const [error, setError] = useState("");
   
   const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  useEffect(() => {
+    initializeAuthListener();
+  }, [initializeAuthListener]);
 
   useEffect(() => {
     if (!loading) {

@@ -6,28 +6,27 @@ import { useTenantStore } from "@/store/useTenantStore";
 export default function TenantProvider({ children }: { children: React.ReactNode }) {
   const { setStoreId, loading, error } = useTenantStore();
 
-  useEffect(() => {
-    // Determine the slug from the URL pathname or subdomain
-    // For path-based: e.g. ecommwl.com/zara -> slug is 'zara'
-    // If root (/), default to 'shaza' (the original store)
-    const pathParts = window.location.pathname.split('/');
-    let slug = pathParts[1];
-    
-    // Quick heuristic: if the first path segment is known system routes, fallback to 'my-store'
-    // In a real subdomain setup, this would read window.location.hostname
-    const systemRoutes = ['admin', 'super-admin', 'superadmin', 'login', 'api', ''];
-    if (systemRoutes.includes(slug)) {
-      slug = 'my-store'; // Default master tenant
-    }
+  // Extract path and check if it's a system route early
+  const pathParts = typeof window !== 'undefined' ? window.location.pathname.split('/') : [];
+  const rawSlug = pathParts[1] || '';
+  const systemRoutes = ['admin', 'super-admin', 'superadmin', 'login', 'api', ''];
+  const isSystemRoute = systemRoutes.includes(rawSlug);
 
+  useEffect(() => {
+    let slug = rawSlug;
+    if (isSystemRoute) {
+      slug = 'my-store'; // Default master tenant for system routes
+    }
     setStoreId(slug);
-  }, [setStoreId]);
+  }, [setStoreId, rawSlug, isSystemRoute]);
 
   if (loading) {
     return <div className="min-h-screen bg-[#FFF8F7] flex items-center justify-center">Loading platform...</div>;
   }
 
-  if (error) {
+  // CRITICAL: Never block system routes (like super-admin or login). 
+  // If there's an error but they are on a system page, let them through so they aren't locked out.
+  if (error && !isSystemRoute) {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4 text-center">
         <h1 className="text-3xl font-bold text-slate-800 mb-2">Store Unavailable</h1>
