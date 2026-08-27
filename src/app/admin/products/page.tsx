@@ -7,6 +7,7 @@ import { Plus, Trash2, Loader2, Image as ImageIcon, Edit2, X, Upload } from "luc
 import { useForm } from "react-hook-form";
 import { logSystemEvent } from "@/lib/audit";
 import { useTenantStore } from "@/store/useTenantStore";
+import { useAuthStore } from "@/store/useAuthStore";
 
 type ProductForm = {
   title: string;
@@ -25,11 +26,13 @@ export default function AdminProducts() {
   
   const { register, handleSubmit, reset, setValue } = useForm<ProductForm>();
   const { store } = useTenantStore();
+  const { userData } = useAuthStore();
 
   const fetchProducts = async () => {
-    if (!store?.id) return;
+    const activeStoreId = userData?.role === 'SUPER_ADMIN' ? (store?.id || 'my-store') : (userData?.storeId || store?.id || 'my-store');
+    
     try {
-      const q = query(collection(db, "products"), where("storeId", "==", store.id));
+      const q = query(collection(db, "products"), where("storeId", "==", activeStoreId));
       const querySnapshot = await getDocs(q);
       const prods = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setProducts(prods);
@@ -41,10 +44,10 @@ export default function AdminProducts() {
   };
 
   useEffect(() => {
-    if (store?.id) {
+    if (store?.id || userData?.storeId) {
       fetchProducts();
     }
-  }, [store?.id]);
+  }, [store?.id, userData?.storeId, userData?.role]);
 
   const compressImage = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -96,7 +99,7 @@ export default function AdminProducts() {
         price: Number(data.price),
         costPrice: Number(data.costPrice),
         stock: Number(data.stock),
-        storeId: store?.id || 'my-store'
+        storeId: userData?.storeId || store?.id || 'my-store'
       };
 
       if (base64Image) {
@@ -171,6 +174,7 @@ export default function AdminProducts() {
             p[h] = values[idx].trim();
           });
 
+          const activeStoreId = userData?.role === 'SUPER_ADMIN' ? (store?.id || 'my-store') : (userData?.storeId || store?.id || 'my-store');
           newProducts.push({
             title: p.title || "Unnamed Product",
             price: Number(p.price) || 0,
@@ -178,7 +182,7 @@ export default function AdminProducts() {
             category: p.category || "General",
             stock: Number(p.stock) || 0,
             image: p.image || "https://placehold.co/800x800",
-            storeId: store?.id || 'my-store',
+            storeId: activeStoreId,
             createdAt: serverTimestamp()
           });
         }
