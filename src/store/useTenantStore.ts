@@ -14,6 +14,7 @@ export interface StoreData {
   theme: ThemeConfig;
   paymentQrUrl?: string;
   ownerId?: string;
+  isActive?: boolean;
 }
 
 interface TenantStore {
@@ -46,6 +47,13 @@ export const useTenantStore = create<TenantStore>((set) => ({
       
       if (storeSnap.exists()) {
         const data = storeSnap.data() as StoreData;
+        
+        // Handle explicit deactivation (undefined means it's an older active store)
+        if (data.isActive === false) {
+          set({ error: "Store inactive", loading: false, store: null });
+          return;
+        }
+
         set({ store: { ...data, id: storeSnap.id }, loading: false });
         
         // Apply dynamic CSS variables to the document root!

@@ -3,9 +3,9 @@
 import { useState, useEffect } from "react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useRouter } from "next/navigation";
-import { collection, addDoc, getDocs, doc, setDoc, updateDoc } from "firebase/firestore";
+import { collection, addDoc, getDocs, doc, setDoc, updateDoc, deleteDoc } from "firebase/firestore";
 import { db, auth } from "@/lib/firebase";
-import { Loader2, Plus, LayoutDashboard, Globe, LogOut, Copy, Check, Settings2, Palette } from "lucide-react";
+import { Loader2, Plus, LayoutDashboard, Globe, LogOut, Copy, Check, Settings2, Palette, Trash2, PowerOff, Power } from "lucide-react";
 import Link from "next/link";
 
 export default function SuperAdminPage() {
@@ -131,6 +131,33 @@ export default function SuperAdminPage() {
     }
   };
 
+  const handleToggleStatus = async (store: any) => {
+    try {
+      const newStatus = store.isActive === false ? true : false;
+      if (!newStatus && !confirm(`Are you sure you want to DEACTIVATE "${store.name}"? Users will not be able to access the store.`)) {
+        return;
+      }
+      await updateDoc(doc(db, "stores", store.id), { isActive: newStatus });
+      fetchStores();
+    } catch (e) {
+      console.error(e);
+      alert("Failed to update store status.");
+    }
+  };
+
+  const handleDeleteStore = async (store: any) => {
+    if (!confirm(`CRITICAL WARNING: Are you absolutely sure you want to permanently DELETE "${store.name}"? This action cannot be undone.`)) {
+      return;
+    }
+    try {
+      await deleteDoc(doc(db, "stores", store.id));
+      fetchStores();
+    } catch (e) {
+      console.error(e);
+      alert("Failed to delete store.");
+    }
+  };
+
   if (loading || fetching) return <div className="flex h-screen items-center justify-center"><Loader2 className="animate-spin w-8 h-8" /></div>;
 
   return (
@@ -171,8 +198,21 @@ export default function SuperAdminPage() {
         {/* Stores Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {stores.map(store => (
-            <div key={store.id} className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 group relative">
-              <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div key={store.id} className={`bg-white p-6 rounded-xl shadow-sm border border-slate-200 group relative transition-opacity ${store.isActive === false ? 'opacity-50 grayscale' : ''}`}>
+              {store.isActive === false && (
+                <div className="absolute top-4 left-4 bg-red-100 text-red-600 text-[10px] font-bold px-2 py-1 rounded-md uppercase tracking-wider">
+                  Inactive
+                </div>
+              )}
+              
+              <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
+                <button 
+                  onClick={() => handleToggleStatus(store)} 
+                  className={`p-2 bg-white ${store.isActive === false ? 'text-green-500 hover:bg-green-50' : 'text-orange-500 hover:bg-orange-50'} border border-slate-100 rounded-lg shadow-sm transition-all`}
+                  title={store.isActive === false ? "Activate Store" : "Deactivate Store"}
+                >
+                  {store.isActive === false ? <Power className="w-4 h-4" /> : <PowerOff className="w-4 h-4" />}
+                </button>
                 <button 
                   onClick={() => openEditModal(store)} 
                   className="p-2 bg-white text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 border border-slate-100 rounded-lg shadow-sm transition-all"
@@ -180,9 +220,16 @@ export default function SuperAdminPage() {
                 >
                   <Palette className="w-4 h-4" />
                 </button>
+                <button 
+                  onClick={() => handleDeleteStore(store)} 
+                  className="p-2 bg-white text-slate-400 hover:text-red-600 hover:bg-red-50 border border-slate-100 rounded-lg shadow-sm transition-all"
+                  title="Delete Store"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
               </div>
 
-              <div className="flex items-start justify-between mb-4">
+              <div className={`flex items-start justify-between mb-4 ${store.isActive === false ? 'mt-6' : ''}`}>
                 <div>
                   <h3 className="font-bold text-lg text-slate-900 pr-8">{store.name}</h3>
                   <div className="flex items-center gap-1.5 text-xs text-slate-500 mt-1 bg-slate-50 px-2 py-1 rounded-md inline-flex border border-slate-100">
