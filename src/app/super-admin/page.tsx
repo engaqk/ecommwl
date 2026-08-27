@@ -3,10 +3,9 @@
 import { useState, useEffect } from "react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useRouter } from "next/navigation";
-import { collection, addDoc, getDocs, doc, setDoc } from "firebase/firestore";
+import { collection, addDoc, getDocs, doc, setDoc, updateDoc } from "firebase/firestore";
 import { db, auth } from "@/lib/firebase";
-import { createUserWithEmailAndPassword } from "firebase/auth";
-import { Loader2, Plus, Users, LayoutDashboard, Globe, Link as LinkIcon, LogOut } from "lucide-react";
+import { Loader2, Plus, LayoutDashboard, Globe, LogOut, Copy, Check, Settings2, Palette } from "lucide-react";
 import Link from "next/link";
 
 export default function SuperAdminPage() {
@@ -16,8 +15,11 @@ export default function SuperAdminPage() {
   const [stores, setStores] = useState<any[]>([]);
   const [fetching, setFetching] = useState(true);
   
-  // New Store Form State
+  // Modal State
   const [showModal, setShowModal] = useState(false);
+  const [editingStoreId, setEditingStoreId] = useState<string | null>(null);
+  
+  // Form State
   const [slug, setSlug] = useState("");
   const [storeName, setStoreName] = useState("");
   const [primaryColor, setPrimaryColor] = useState("#4A2533");
@@ -25,6 +27,8 @@ export default function SuperAdminPage() {
   const [bgColor, setBgColor] = useState("#FFF8F7");
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
+  
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading) {
@@ -47,52 +51,78 @@ export default function SuperAdminPage() {
     }
   };
 
-  const handleCreateStore = async (e: React.FormEvent) => {
+  const copyToClipboard = (slug: string) => {
+    navigator.clipboard.writeText(`https://ecommwl.vercel.app/${slug}`);
+    setCopiedId(slug);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const openNewStoreModal = () => {
+    setEditingStoreId(null);
+    setSlug("");
+    setStoreName("");
+    setPrimaryColor("#4A2533");
+    setSecondaryColor("#B76E79");
+    setBgColor("#FFF8F7");
+    setError("");
+    setShowModal(true);
+  };
+
+  const openEditModal = (store: any) => {
+    setEditingStoreId(store.id);
+    setSlug(store.id);
+    setStoreName(store.name);
+    setPrimaryColor(store.theme?.primary || "#4A2533");
+    setSecondaryColor(store.theme?.secondary || "#B76E79");
+    setBgColor(store.theme?.background || "#FFF8F7");
+    setError("");
+    setShowModal(true);
+  };
+
+  const handleSaveStore = async (e: React.FormEvent) => {
     e.preventDefault();
     setCreating(true);
     setError("");
 
     try {
-      // 1. Create the store config document in 'stores' collection
       const formattedSlug = slug.toLowerCase().replace(/[^a-z0-9]/g, "-");
-      const storeRef = doc(db, "stores", formattedSlug);
-      await setDoc(storeRef, {
+      const storeRef = doc(db, "stores", editingStoreId ? editingStoreId : formattedSlug);
+      
+      const payload = {
         name: storeName,
         theme: {
           primary: primaryColor,
           secondary: secondaryColor,
           background: bgColor
-        },
-        createdAt: new Date().toISOString()
-      });
+        }
+      };
 
-      // 2. Provision the default Admin User for this store
-      // Username: [slug]_admin -> email: [slug]_admin@admin.local
-      const adminEmail = `${formattedSlug}_admin@admin.local`;
-      const adminPassword = "admin";
+      if (editingStoreId) {
+        await updateDoc(storeRef, payload);
+      } else {
+        await setDoc(storeRef, {
+          ...payload,
+          createdAt: new Date().toISOString()
+        });
 
-      // We have to use a secondary Firebase app or cloud function to create a user without logging out the Super Admin.
-      // For this prototype, we'll hit an API route that creates the user securely using Firebase Admin.
-      // (If running fully client-side, Firebase logs you out when you create a new account.
-      // We will assume an API endpoint `/api/admin/create-tenant-user` exists for this).
-      
-      const res = await fetch("/api/admin/create-tenant-user", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: adminEmail,
-          password: adminPassword,
-          role: "TENANT_ADMIN",
-          storeId: formattedSlug,
-          displayName: `${storeName} Admin`
-        })
-      });
+        // Provision the default Admin User ONLY for new stores
+        const adminEmail = `${formattedSlug}_admin@admin.local`;
+        const res = await fetch("/api/admin/create-tenant-user", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: adminEmail,
+            password: "admin",
+            role: "TENANT_ADMIN",
+            storeId: formattedSlug,
+            displayName: `${storeName} Admin`
+          })
+        });
 
-      if (!res.ok) throw new Error("Failed to provision admin account.");
+        if (!res.ok) throw new Error("Store created, but failed to provision admin account keys.");
+      }
 
       setShowModal(false);
-      setSlug("");
-      setStoreName("");
       fetchStores();
     } catch (err: any) {
       setError(err.message);
@@ -131,7 +161,7 @@ export default function SuperAdminPage() {
             <p className="text-sm text-slate-500">Manage all whitelabel stores on the platform.</p>
           </div>
           <button 
-            onClick={() => setShowModal(true)}
+            onClick={openNewStoreModal}
             className="flex items-center gap-2 bg-indigo-600 text-white px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors"
           >
             <Plus className="w-4 h-4" /> New Store
@@ -141,16 +171,34 @@ export default function SuperAdminPage() {
         {/* Stores Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {stores.map(store => (
-            <div key={store.id} className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+            <div key={store.id} className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 group relative">
+              <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button 
+                  onClick={() => openEditModal(store)} 
+                  className="p-2 bg-white text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 border border-slate-100 rounded-lg shadow-sm transition-all"
+                  title="Customize Template"
+                >
+                  <Palette className="w-4 h-4" />
+                </button>
+              </div>
+
               <div className="flex items-start justify-between mb-4">
                 <div>
-                  <h3 className="font-bold text-lg text-slate-900">{store.name}</h3>
-                  <div className="flex items-center gap-1.5 text-xs text-slate-500 mt-1">
-                    <Globe className="w-3.5 h-3.5" /> ecommwl.com/{store.id}
+                  <h3 className="font-bold text-lg text-slate-900 pr-8">{store.name}</h3>
+                  <div className="flex items-center gap-1.5 text-xs text-slate-500 mt-1 bg-slate-50 px-2 py-1 rounded-md inline-flex border border-slate-100">
+                    <Globe className="w-3 h-3 text-slate-400" /> 
+                    <span>ecommwl.vercel.app/{store.id}</span>
+                    <button 
+                      onClick={() => copyToClipboard(store.id)} 
+                      className="ml-1 p-1 hover:bg-slate-200 rounded transition-colors"
+                      title="Copy URL"
+                    >
+                      {copiedId === store.id ? <Check className="w-3 h-3 text-green-600" /> : <Copy className="w-3 h-3 text-slate-500 hover:text-slate-800" />}
+                    </button>
                   </div>
                 </div>
                 {/* Theme Preview circles */}
-                <div className="flex -space-x-2">
+                <div className="flex -space-x-2 mt-1">
                   <div className="w-6 h-6 rounded-full border-2 border-white shadow-sm" style={{ backgroundColor: store.theme?.primary }}></div>
                   <div className="w-6 h-6 rounded-full border-2 border-white shadow-sm" style={{ backgroundColor: store.theme?.secondary }}></div>
                 </div>
@@ -176,52 +224,59 @@ export default function SuperAdminPage() {
         </div>
       </main>
 
-      {/* New Store Modal */}
+      {/* Edit/New Store Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-2xl w-full max-w-lg shadow-xl overflow-hidden">
             <div className="p-6 border-b border-slate-100 flex justify-between items-center">
-              <h3 className="text-lg font-bold text-slate-800">Provision New Tenant</h3>
+              <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                {editingStoreId ? <Palette className="w-5 h-5 text-indigo-500" /> : null}
+                {editingStoreId ? 'Customize Template' : 'Provision New Tenant'}
+              </h3>
               <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600">×</button>
             </div>
-            <form onSubmit={handleCreateStore} className="p-6 space-y-5">
+            <form onSubmit={handleSaveStore} className="p-6 space-y-5">
               {error && <div className="p-3 bg-red-50 text-red-600 text-sm rounded-lg">{error}</div>}
               
               <div>
                 <label className="block text-xs font-semibold text-slate-600 mb-1.5">Brand Name</label>
-                <input required type="text" value={storeName} onChange={e => setStoreName(e.target.value)} className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:border-indigo-500" placeholder="e.g. Nike Custom" />
+                <input required type="text" value={storeName} onChange={e => setStoreName(e.target.value)} className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:border-indigo-500 transition-colors" placeholder="e.g. Nike Custom" />
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-slate-600 mb-1.5">URL Slug</label>
                 <div className="flex">
-                  <span className="inline-flex items-center px-4 bg-slate-100 border border-r-0 border-slate-200 rounded-l-lg text-slate-500 text-sm">ecommwl.com/</span>
-                  <input required type="text" value={slug} onChange={e => setSlug(e.target.value)} className="flex-1 px-4 py-2 bg-slate-50 border border-slate-200 rounded-r-lg text-sm outline-none focus:border-indigo-500" placeholder="nike" />
+                  <span className="inline-flex items-center px-4 bg-slate-100 border border-r-0 border-slate-200 rounded-l-lg text-slate-500 text-sm">ecommwl.vercel.app/</span>
+                  <input required type="text" value={slug} onChange={e => setSlug(e.target.value)} disabled={!!editingStoreId} className="flex-1 px-4 py-2 bg-slate-50 border border-slate-200 rounded-r-lg text-sm outline-none focus:border-indigo-500 disabled:opacity-60 disabled:cursor-not-allowed" placeholder="nike" />
                 </div>
-                <p className="text-[10px] text-slate-400 mt-1.5">Admin user will automatically be created as <b>{slug || 'slug'}_admin</b></p>
+                {!editingStoreId && <p className="text-[10px] text-slate-400 mt-1.5">Admin user will automatically be created as <b>{slug || 'slug'}_admin</b></p>}
+                {editingStoreId && <p className="text-[10px] text-orange-500 mt-1.5">URL slugs cannot be changed once a store is live.</p>}
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1.5">Primary Color</label>
-                  <div className="flex gap-2">
-                    <input type="color" value={primaryColor} onChange={e => setPrimaryColor(e.target.value)} className="w-10 h-10 p-1 border border-slate-200 rounded-lg cursor-pointer" />
-                    <input type="text" value={primaryColor} onChange={e => setPrimaryColor(e.target.value)} className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-mono" />
+              <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-4">
+                <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Template Colors</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 mb-1.5">Primary Color</label>
+                    <div className="flex gap-2">
+                      <input type="color" value={primaryColor} onChange={e => setPrimaryColor(e.target.value)} className="w-10 h-10 p-1 bg-white border border-slate-200 rounded-lg cursor-pointer" />
+                      <input type="text" value={primaryColor} onChange={e => setPrimaryColor(e.target.value)} className="flex-1 px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm font-mono uppercase" />
+                    </div>
                   </div>
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1.5">Secondary Color</label>
-                  <div className="flex gap-2">
-                    <input type="color" value={secondaryColor} onChange={e => setSecondaryColor(e.target.value)} className="w-10 h-10 p-1 border border-slate-200 rounded-lg cursor-pointer" />
-                    <input type="text" value={secondaryColor} onChange={e => setSecondaryColor(e.target.value)} className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-mono" />
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 mb-1.5">Secondary Color</label>
+                    <div className="flex gap-2">
+                      <input type="color" value={secondaryColor} onChange={e => setSecondaryColor(e.target.value)} className="w-10 h-10 p-1 bg-white border border-slate-200 rounded-lg cursor-pointer" />
+                      <input type="text" value={secondaryColor} onChange={e => setSecondaryColor(e.target.value)} className="flex-1 px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm font-mono uppercase" />
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <div className="pt-4 flex justify-end gap-3">
-                <button type="button" onClick={() => setShowModal(false)} className="px-5 py-2 text-sm text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">Cancel</button>
-                <button type="submit" disabled={creating} className="px-5 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors flex items-center gap-2 disabled:opacity-70">
-                  {creating && <Loader2 className="w-4 h-4 animate-spin" />} Provision Store
+              <div className="pt-4 flex justify-end gap-3 border-t border-slate-100">
+                <button type="button" onClick={() => setShowModal(false)} className="px-5 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">Cancel</button>
+                <button type="submit" disabled={creating} className="px-6 py-2.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors flex items-center gap-2 disabled:opacity-70 shadow-sm shadow-indigo-600/20">
+                  {creating && <Loader2 className="w-4 h-4 animate-spin" />} {editingStoreId ? 'Save Customizations' : 'Provision Store'}
                 </button>
               </div>
             </form>
