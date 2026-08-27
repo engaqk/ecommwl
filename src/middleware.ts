@@ -32,7 +32,8 @@ export function middleware(request: NextRequest) {
     'icon.svg'
   ];
 
-  if (systemRoutes.includes(firstSegment)) {
+  // If it's a system route OR a static file (contains a dot like sw.js), let Next.js handle it naturally
+  if (systemRoutes.includes(firstSegment) || firstSegment.includes('.')) {
     return NextResponse.next();
   }
 
