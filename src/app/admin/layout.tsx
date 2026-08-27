@@ -6,8 +6,10 @@ import { onAuthStateChanged, signOut } from "firebase/auth";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { LayoutDashboard, ShoppingBag, Package, LogOut, Loader2, Paintbrush, Megaphone, Settings, Store, Menu, X } from "lucide-react";
+import { useTenantStore } from "@/store/useTenantStore";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
+  const { store } = useTenantStore();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -79,7 +81,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </svg>
             <div className="flex flex-col items-start">
               <span className="text-xl font-serif text-white font-bold tracking-tight leading-none">
-                SHAZA<span className="text-[var(--color-primary)]">53</span>
+                {store?.name || "MY STORE"}
               </span>
               <span className="text-[7px] uppercase tracking-[6px] text-white/60 mt-1 pl-1">
                 Admin
@@ -134,9 +136,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               <Menu className="w-6 h-6" />
             </button>
             <div className="flex flex-col items-start">
-              <span className="font-playfair text-xl font-bold tracking-widest text-[var(--color-navy)] flex items-center gap-1">
-                SHAZA
-                <span className="text-sm font-normal text-[var(--color-primary)] font-sans mt-0.5">53</span>
+              <span className="font-serif text-xl font-bold tracking-tight text-[var(--color-navy)] flex items-center gap-1">
+                {store?.name || "MY STORE"}
               </span>
               <span className="text-[0.5rem] tracking-[0.25em] text-[var(--color-navy)]/80 uppercase mt-0.5">
                 Admin

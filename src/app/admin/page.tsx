@@ -5,8 +5,10 @@ import { auth } from "@/lib/firebase";
 import { signInWithEmailAndPassword, onAuthStateChanged, createUserWithEmailAndPassword } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import { Lock, Mail, Loader2 } from "lucide-react";
+import { useTenantStore } from "@/store/useTenantStore";
 
 export default function AdminLogin() {
+  const { store } = useTenantStore();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -95,12 +97,11 @@ export default function AdminLogin() {
               </linearGradient>
             </defs>
           </svg>
-          <span className="font-playfair text-3xl font-bold tracking-widest text-[var(--color-navy)] flex items-center gap-2">
-            SHAZA
-            <span className="text-xl font-normal text-[var(--color-primary)] font-sans mt-1">53</span>
+          <span className="font-serif text-3xl font-bold tracking-tight text-[var(--color-navy)] flex items-center gap-2">
+            {store?.name || "MY STORE"}
           </span>
           <span className="text-[0.65rem] tracking-[0.3em] text-[var(--color-navy)] uppercase mt-1">
-            Admin
+            Admin Portal
           </span>
         </div>
 
@@ -121,7 +122,7 @@ export default function AdminLogin() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 className="w-full bg-gray-50 border border-gray-200 rounded-xl py-3 pl-10 pr-4 outline-none focus:border-[var(--color-primary)] transition-colors"
-                placeholder="admin@shaza53.com"
+                placeholder={`admin@${store?.id || "my-store"}.com`}
               />
             </div>
           </div>
