@@ -49,7 +49,8 @@ export const useTenantStore = create<TenantStore>((set) => ({
         const data = storeSnap.data() as StoreData;
         
         // Handle explicit deactivation (undefined means it's an older active store)
-        if (data.isActive === false) {
+        // CRITICAL: Never block 'my-store' so we don't lock out the Super Admin!
+        if (data.isActive === false && storeSnap.id !== 'my-store') {
           set({ error: "Store inactive", loading: false, store: null });
           return;
         }
