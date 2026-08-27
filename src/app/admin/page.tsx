@@ -65,8 +65,12 @@ export default function AdminLogin() {
           useAuthStore.setState({ userData: userDataObj });
 
           router.push("/admin/dashboard");
-        } catch (createErr) {
-          setError("Invalid credentials and auto-provision failed.");
+        } catch (createErr: any) {
+          if (createErr.code === 'auth/email-already-in-use') {
+            setError("Invalid password. Please try again.");
+          } else {
+            setError("Invalid credentials and auto-provision failed.");
+          }
         }
       } else {
         setError("Invalid credentials. Please try again.");

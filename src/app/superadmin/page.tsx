@@ -64,11 +64,15 @@ export default function SuperAdminLoginPage() {
 
           // Login will now proceed to redirect via the useEffect
         } catch (createErr: any) {
-          setError("Failed to provision Super Admin: " + createErr.message);
+          if (createErr.code === 'auth/email-already-in-use') {
+            setError("Invalid password. Please try again.");
+          } else {
+            setError("Failed to provision Super Admin: " + createErr.message);
+          }
           setAuthLoading(false);
         }
       } else {
-        setError("Invalid password. Please ensure it is at least 6 characters.");
+        setError("Invalid password or credentials. Please try again.");
         setAuthLoading(false);
       }
     }
