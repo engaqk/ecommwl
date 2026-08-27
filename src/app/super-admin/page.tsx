@@ -123,7 +123,10 @@ export default function SuperAdminPage() {
           })
         });
 
-        if (!res.ok) throw new Error("Store created, but failed to provision admin account keys.");
+        if (!res.ok) {
+          const errorData = await res.json().catch(() => ({}));
+          throw new Error(errorData.error || "Store created, but failed to provision admin account keys.");
+        }
       }
 
       setShowModal(false);

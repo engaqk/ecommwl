@@ -28,6 +28,19 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: true, uid: userRecord.uid });
   } catch (error: any) {
     console.error('Error provisioning tenant admin:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    
+    // Check if env vars are the culprit
+    const missingVars = [];
+    if (!process.env.FIREBASE_PROJECT_ID) missingVars.push('FIREBASE_PROJECT_ID');
+    if (!process.env.FIREBASE_CLIENT_EMAIL) missingVars.push('FIREBASE_CLIENT_EMAIL');
+    if (!process.env.FIREBASE_PRIVATE_KEY) missingVars.push('FIREBASE_PRIVATE_KEY');
+
+    if (missingVars.length > 0) {
+      return NextResponse.json({ 
+        error: `Missing Vercel Environment Variables: ${missingVars.join(', ')}. Please add them in Vercel Project Settings and redeploy.` 
+      }, { status: 500 });
+    }
+
+    return NextResponse.json({ error: error.message || error.toString() }, { status: 500 });
   }
 }

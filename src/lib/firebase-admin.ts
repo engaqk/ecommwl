@@ -28,10 +28,12 @@ import { App } from 'firebase-admin/app';
 
 export const getAdminAuth = () => {
   const app = getAdminApp();
-  return app ? getAuth(app as App) : getAuth();
+  if (!app) throw new Error("Firebase Admin SDK failed to initialize. Check your Environment Variables.");
+  return getAuth(app as App);
 };
 
 export const getAdminDb = () => {
   const app = getAdminApp();
-  return app ? getFirestore(app as App) : getFirestore();
+  if (!app) throw new Error("Firebase Admin SDK failed to initialize. Check your Environment Variables.");
+  return getFirestore(app as App);
 };
