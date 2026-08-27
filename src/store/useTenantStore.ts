@@ -64,7 +64,15 @@ export const useTenantStore = create<TenantStore>((set) => ({
           root.style.setProperty('--color-background', data.theme?.background || defaultTheme.background);
         }
       } else {
-        set({ error: "Store not found", loading: false, store: null });
+        // If the master store document doesn't exist yet, gracefully use the fallback.
+        if (slug === 'my-store') {
+          set({ 
+            store: { id: 'my-store', name: 'Master Store', theme: defaultTheme }, 
+            loading: false 
+          });
+        } else {
+          set({ error: "Store not found", loading: false, store: null });
+        }
       }
     } catch (err: any) {
       console.error("Error fetching store:", err);

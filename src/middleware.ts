@@ -29,7 +29,8 @@ export function middleware(request: NextRequest) {
     '_next',
     'favicon.ico',
     'manifest.json',
-    'icon.svg'
+    'icon.svg',
+    'icons'
   ];
 
   // If it's a system route OR a static file (contains a dot like sw.js), let Next.js handle it naturally
